@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TechPath Frontend
 
-## Getting Started
+Aplicação frontend do TechPath, construída com [Next.js](https://nextjs.org).
 
-First, run the development server:
+## Tecnologias
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- ESLint
+
+## Pré-requisitos
+
+- Node.js 22+
+- npm
+
+## Como rodar localmente
+
+1. Instalar as dependências:
+
+```bash
+npm install
+```
+
+2. Rodar em modo desenvolvimento:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Acessar [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts disponíveis
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Comando | Descrição |
+| --- | --- |
+| `npm run dev` | Inicia o servidor de desenvolvimento |
+| `npm run build` | Gera o build de produção |
+| `npm run start` | Inicia o servidor a partir do build de produção |
+| `npm run lint` | Executa o ESLint |
 
-## Learn More
+## Rodando com Docker
 
-To learn more about Next.js, take a look at the following resources:
+O [Dockerfile](Dockerfile) possui múltiplos estágios: `dev`, `build` e `production`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# build da imagem de desenvolvimento
+docker build --target dev -t techpath-frontend:dev .
+docker run -p 3000:3000 techpath-frontend:dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# build da imagem de produção
+docker build --target production -t techpath-frontend:prod .
+docker run -p 3000:3000 techpath-frontend:prod
+```
 
-## Deploy on Vercel
+## Rodando o projeto completo (frontend + backend + Postgres + Nginx)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Na raiz do repositório (`TechPath/`) existe um `docker-compose.yml` que orquestra todos os serviços do projeto.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+cd ..
+docker-compose up --build
+```
+
+Após subir os containers, a aplicação fica disponível via Nginx em [http://localhost](http://localhost) (porta configurável pela variável `NGINX_PORT` no `.env` da raiz).
