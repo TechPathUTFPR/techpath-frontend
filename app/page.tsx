@@ -2,23 +2,34 @@
 
 import { useState } from "react";
 
+// --- COMPONENTE DA LOGO ---
+function TechPathLogo({
+  size = "normal",
+}: {
+  size?: "small" | "normal" | "large";
+}) {
+  const imgSizes = {
+    small: "w-32 md:w-36",
+    normal: "w-48",
+    large: "w-56 md:w-64",
+  };
+
+  return (
+    <div className="flex items-center">
+      <img
+        src="/logo.png"
+        alt="TechPath Logo"
+        className={`${imgSizes[size]} h-auto object-contain`}
+      />
+    </div>
+  );
+}
+
+// --- TIPAGENS E PERGUNTAS DO QUESTIONÁRIO ---
 type Area = "dev" | "ux" | "devops";
-
-type Alternativa = {
-  texto: string;
-  area: Area;
-};
-
-type Pergunta = {
-  categoria: string;
-  pergunta: string;
-  alternativas: Alternativa[];
-};
-
-const criarAlternativa = (texto: string, area: Area): Alternativa => ({
-  texto,
-  area,
-});
+type Alternativa = { texto: string; area: Area };
+type Pergunta = { categoria: string; pergunta: string; alternativas: Alternativa[] };
+const criarAlternativa = (texto: string, area: Area): Alternativa => ({ texto, area });
 
 const perguntas: Pergunta[] = [
   {
@@ -243,15 +254,66 @@ const perguntas: Pergunta[] = [
   },
 ];
 
-export default function Home() {
+export default function App() {
+  const [telaAtual, setTelaAtual] = useState<
+    "login" | "cadastro" | "redefinirSenha" | "questionario" | "resultado"
+  >("login");
+
+  // Estados de erro para os formulários
+  const [erroForm, setErroForm] = useState("");
+
   const [perguntaAtual, setPerguntaAtual] = useState(0);
-  const [respostas, setRespostas] = useState<(number | null)[]>(
-    Array(perguntas.length).fill(null)
-  );
-  const [finalizado, setFinalizado] = useState(false);
+  const [respostas, setRespostas] = useState<(number | null)[]>(Array(perguntas.length).fill(null));
+
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
 
   const pergunta = perguntas[perguntaAtual];
   const respostaSelecionada = respostas[perguntaAtual];
+
+  const mudarTela = (novaTela: "login" | "cadastro" | "redefinirSenha" | "questionario" | "resultado") => {
+    setErroForm(""); // Limpa o erro ao trocar de tela
+    setTelaAtual(novaTela);
+  };
+
+  // --- VALIDAÇÕES DE FORMULÁRIO ---
+  const handleLogin = () => {
+    if (!email || !senha) {
+      setErroForm("Preencha todos os campos para continuar.");
+      return;
+    }
+    setErroForm("");
+    mudarTela("questionario");
+  };
+
+  const handleCadastro = () => {
+    if (!email || !senha || !confirmarSenha) {
+      setErroForm("Preencha todos os campos.");
+      return;
+    }
+    if (senha !== confirmarSenha) {
+      setErroForm("As senhas não coincidem. Tente novamente.");
+      return;
+    }
+    setErroForm("");
+    mudarTela("questionario");
+  };
+
+  const handleRedefinirSenha = () => {
+    if (!email || !novaSenha || !confirmarSenha) {
+      setErroForm("Preencha todos os campos.");
+      return;
+    }
+    if (novaSenha !== confirmarSenha) {
+      setErroForm("A nova senha e a confirmação não coincidem.");
+      return;
+    }
+    setErroForm("");
+    alert("Senha redefinida com sucesso!");
+    mudarTela("login");
+  };
 
   const selecionarResposta = (indice: number) => {
     const novasRespostas = [...respostas];
@@ -260,15 +322,11 @@ export default function Home() {
   };
 
   const proximaPergunta = () => {
-    if (respostaSelecionada === null) {
-      return;
-    }
-
+    if (respostaSelecionada === null) return;
     if (perguntaAtual === perguntas.length - 1) {
-      setFinalizado(true);
+      mudarTela("resultado");
       return;
     }
-
     setPerguntaAtual(perguntaAtual + 1);
   };
 
@@ -279,270 +337,456 @@ export default function Home() {
   };
 
   const calcularResultado = () => {
-    const pontuacoes = {
-      dev: 0,
-      ux: 0,
-      devops: 0,
-    };
-
+    const pontuacoes = { dev: 0, ux: 0, devops: 0 };
     respostas.forEach((resposta, indicePergunta) => {
-      if (resposta === null) {
-        return;
-      }
-
-      const alternativa =
-        perguntas[indicePergunta].alternativas[resposta];
-
-      pontuacoes[alternativa.area] += 3;
+      if (resposta === null) return;
+      const alternativa = perguntas[indicePergunta].alternativas[resposta];
+      pontuacoes[alternativa.area] += 1;
     });
 
-    const total =
-      pontuacoes.dev +
-      pontuacoes.ux +
-      pontuacoes.devops;
+    const total = pontuacoes.dev + pontuacoes.ux + pontuacoes.devops;
 
     if (total === 0) {
-      return {
-        dev: 0,
-        ux: 0,
-        devops: 0,
-      };
+      return [
+        {
+          nome: "Engenharia de Software",
+          pct: 92,
+          desc: "A Engenharia de Software é uma área focada no desenvolvimento de sistemas, lógica de programação e arquitetura de software.",
+        },
+        { nome: "UX/UI", pct: 50, desc: "Desenvolvimento de interfaces e experiência do usuário." },
+        { nome: "DevOps", pct: 50, desc: "Automação e gestão de servidores em nuvem." },
+      ];
     }
 
-    return {
-      dev: Math.round((pontuacoes.dev / total) * 100),
-      ux: Math.round((pontuacoes.ux / total) * 100),
-      devops: Math.round((pontuacoes.devops / total) * 100),
-    };
+    const lista = [
+      {
+        nome: "Engenharia de Software",
+        pct: Math.round((pontuacoes.dev / total) * 100) || 92,
+        desc: "A Engenharia de Software é uma área focada no desenvolvimento de sistemas, lógica de programação e arquitetura de software.",
+      },
+      {
+        nome: "UX/UI",
+        pct: Math.round((pontuacoes.ux / total) * 100) || 50,
+        desc: "Design de interfaces intuitivas, prototipação e experiência do usuário.",
+      },
+      {
+        nome: "DevOps",
+        pct: Math.round((pontuacoes.devops / total) * 100) || 50,
+        desc: "Infraestrutura em nuvem, configuração de servidores e automação de deploys.",
+      },
+    ];
+
+    return lista.sort((a, b) => b.pct - a.pct);
   };
 
   const refazerQuestionario = () => {
     setPerguntaAtual(0);
     setRespostas(Array(perguntas.length).fill(null));
-    setFinalizado(false);
+    mudarTela("questionario");
   };
 
-  if (finalizado) {
-    const resultado = calcularResultado();
+  const progresso = Math.round(((perguntaAtual + 1) / perguntas.length) * 100);
+  const ranking = calcularResultado();
+  const principal = ranking[0];
+  const outrasAreas = ranking.slice(1);
 
-    const maiorPontuacao = Math.max(
-      resultado.dev,
-      resultado.ux,
-      resultado.devops
-    );
-
-    const areasComMaiorPontuacao = [];
-
-    if (resultado.dev === maiorPontuacao) {
-      areasComMaiorPontuacao.push("Desenvolvimento");
-    }
-
-    if (resultado.ux === maiorPontuacao) {
-      areasComMaiorPontuacao.push("UX/UI");
-    }
-
-    if (resultado.devops === maiorPontuacao) {
-      areasComMaiorPontuacao.push("DevOps");
-    }
-
+  // ==========================================
+  // 1. TELA DE LOGIN
+  // ==========================================
+  if (telaAtual === "login") {
     return (
-      <main className="min-h-screen bg-gray-100">
-        <header className="flex items-center justify-between bg-purple-700 px-6 py-4 text-white">
-          <h1 className="text-2xl font-bold">TechPath</h1>
+      <div className="min-h-screen bg-[#F3EFFC] flex flex-col items-center justify-center p-4 font-sans text-gray-900">
+        <div className="w-full max-w-md flex flex-col items-center">
+          <div className="mb-8 flex justify-center">
+            <TechPathLogo size="large" />
+          </div>
 
-          <button className="rounded-lg px-4 py-2 hover:bg-purple-600">
-            Sair
-          </button>
-        </header>
+          <h1 className="text-xl font-bold text-[#5816B7] mb-6">Seja bem vindo(a)!</h1>
 
-        <section className="mx-auto max-w-3xl px-6 py-10">
-          <div className="rounded-2xl bg-white p-8 shadow-md">
-            <p className="mb-2 text-center text-sm font-medium text-purple-600">
-              Questionário concluído
-            </p>
-
-            <h2 className="mb-8 text-center text-3xl font-bold text-gray-800">
-              Seu perfil TechPath
-            </h2>
-
-            <div className="mb-8 rounded-xl bg-purple-50 p-6 text-center">
-              <p className="text-sm text-gray-600">
-                Maior afinidade
-              </p>
-
-              <h3 className="mt-2 text-2xl font-bold text-purple-700">
-                {areasComMaiorPontuacao.join(" / ")}
-              </h3>
+          <div className="w-full bg-white rounded-3xl p-8 shadow-sm border border-purple-50 flex flex-col gap-5">
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Email</label>
+              <input
+                type="email"
+                placeholder="email@dominio.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <div className="mb-2 flex justify-between">
-                  <span className="font-semibold text-gray-700">
-                    Desenvolvimento
-                  </span>
-
-                  <span className="font-bold">
-                    {resultado.dev}%
-                  </span>
-                </div>
-
-                <div className="h-4 overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full rounded-full bg-blue-500"
-                    style={{ width: `${resultado.dev}%` }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex justify-between">
-                  <span className="font-semibold text-gray-700">
-                    UX/UI
-                  </span>
-
-                  <span className="font-bold">
-                    {resultado.ux}%
-                  </span>
-                </div>
-
-                <div className="h-4 overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full rounded-full bg-pink-500"
-                    style={{ width: `${resultado.ux}%` }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-2 flex justify-between">
-                  <span className="font-semibold text-gray-700">
-                    DevOps
-                  </span>
-
-                  <span className="font-bold">
-                    {resultado.devops}%
-                  </span>
-                </div>
-
-                <div className="h-4 overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full rounded-full bg-green-500"
-                    style={{ width: `${resultado.devops}%` }}
-                  />
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Senha</label>
+              <input
+                type="password"
+                placeholder="***"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
             </div>
+
+            {erroForm && (
+              <p className="text-red-500 text-xs font-semibold text-center">{erroForm}</p>
+            )}
 
             <button
-              onClick={refazerQuestionario}
-              className="mt-10 w-full rounded-xl bg-purple-700 py-3 font-semibold text-white transition hover:bg-purple-800"
+              onClick={handleLogin}
+              className="w-full mt-2 py-3 bg-[#5816B7] text-white font-bold rounded-xl hover:bg-[#470f99] transition shadow-xs text-sm"
             >
-              Refazer questionário
+              Continuar
             </button>
+
+            <div className="flex items-center justify-between text-xs font-semibold text-gray-600 mt-2">
+              <button onClick={() => mudarTela("redefinirSenha")} className="hover:text-[#5816B7]">
+                Esqueceu a senha?
+              </button>
+
+              <div>
+                <span>Ainda não possui cadastro? </span>
+                <button
+                  onClick={() => mudarTela("cadastro")}
+                  className="text-[#5816B7] font-bold hover:underline"
+                >
+                  Criar conta
+                </button>
+              </div>
+            </div>
           </div>
-        </section>
-      </main>
+
+          <p className="text-[11px] text-gray-500 text-center mt-6 max-w-xs leading-relaxed">
+            Ao clicar em Continuar, você concorda com nossos{" "}
+            <a href="#" className="underline font-semibold">
+              Termos de Uso
+            </a>{" "}
+            e{" "}
+            <a href="#" className="underline font-semibold">
+              Política de Privacidade
+            </a>
+            .
+          </p>
+        </div>
+      </div>
     );
   }
 
-  const progresso =
-    ((perguntaAtual + 1) / perguntas.length) * 100;
+  // ==========================================
+  // 2. TELA DE CADASTRO
+  // ==========================================
+  if (telaAtual === "cadastro") {
+    return (
+      <div className="min-h-screen bg-[#F3EFFC] flex flex-col items-center justify-center p-4 font-sans text-gray-900">
+        <div className="w-full max-w-md flex flex-col items-center">
+          <div className="mb-8 flex justify-center">
+            <TechPathLogo size="large" />
+          </div>
 
+          <div className="w-full bg-white rounded-3xl p-8 shadow-sm border border-purple-50 flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Email</label>
+              <input
+                type="email"
+                placeholder="email@dominio.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Senha</label>
+              <input
+                type="password"
+                placeholder="***"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Confirmar Senha</label>
+              <input
+                type="password"
+                placeholder="***"
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
+            </div>
+
+            {erroForm && (
+              <p className="text-red-500 text-xs font-semibold text-center">{erroForm}</p>
+            )}
+
+            <button
+              onClick={handleCadastro}
+              className="w-full mt-3 py-3 bg-[#5816B7] text-white font-bold rounded-xl hover:bg-[#470f99] transition shadow-xs text-sm"
+            >
+              Criar conta
+            </button>
+
+            <div className="text-center text-xs font-semibold text-gray-600 mt-2">
+              <span>Já possui conta? </span>
+              <button
+                onClick={() => mudarTela("login")}
+                className="text-[#5816B7] font-bold hover:underline"
+              >
+                Entre Aqui
+              </button>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-gray-500 text-center mt-6 max-w-xs leading-relaxed">
+            Ao clicar em Criar Conta, você concorda com nossos{" "}
+            <a href="#" className="underline font-semibold">
+              Termos de Uso
+            </a>{" "}
+            e{" "}
+            <a href="#" className="underline font-semibold">
+              Política de Privacidade
+            </a>
+            .
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // 3. TELA DE REDEFINIR SENHA
+  // ==========================================
+  if (telaAtual === "redefinirSenha") {
+    return (
+      <div className="min-h-screen bg-[#F3EFFC] flex flex-col items-center justify-center p-4 font-sans text-gray-900">
+        <div className="w-full max-w-md flex flex-col items-center">
+          <div className="mb-8 flex justify-center">
+            <TechPathLogo size="large" />
+          </div>
+
+          <div className="w-full bg-white rounded-3xl p-8 shadow-sm border border-purple-50 flex flex-col gap-4">
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Email</label>
+              <input
+                type="email"
+                placeholder="email@dominio.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Nova senha</label>
+              <input
+                type="password"
+                placeholder="***"
+                value={novaSenha}
+                onChange={(e) => setNovaSenha(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-[#5816B7] mb-1.5">Confirmar senha</label>
+              <input
+                type="password"
+                placeholder="***"
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-[#5816B7] transition"
+              />
+            </div>
+
+            {erroForm && (
+              <p className="text-red-500 text-xs font-semibold text-center">{erroForm}</p>
+            )}
+
+            <button
+              onClick={handleRedefinirSenha}
+              className="w-full mt-3 py-3 bg-[#5816B7] text-white font-bold rounded-xl hover:bg-[#470f99] transition shadow-xs text-sm"
+            >
+              Retornar ao Login
+            </button>
+          </div>
+
+          <p className="text-[11px] text-gray-500 text-center mt-6 max-w-xs leading-relaxed">
+            Ao clicar em Continuar, você concorda com nossos{" "}
+            <a href="#" className="underline font-semibold">
+              Termos de Uso
+            </a>{" "}
+            e{" "}
+            <a href="#" className="underline font-semibold">
+              Política de Privacidade
+            </a>
+            .
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // 4. QUESTIONÁRIO E RESULTADOS COM SIDEBAR
+  // ==========================================
   return (
-    <main className="min-h-screen bg-gray-100">
-      <header className="flex items-center justify-between bg-purple-700 px-6 py-4 text-white">
-        <h1 className="text-2xl font-bold">TechPath</h1>
-
-        <button className="rounded-lg px-4 py-2 hover:bg-purple-600">
-          Sair
-        </button>
-      </header>
-
-      <section className="mx-auto max-w-3xl px-6 py-8">
-        <div className="mb-6">
-          <div className="mb-2 flex justify-between text-sm font-medium text-gray-600">
-            <span>
-              Pergunta {perguntaAtual + 1} de {perguntas.length}
-            </span>
-
-            <span>{Math.round(progresso)}%</span>
-          </div>
-
-          <div className="h-2 overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full rounded-full bg-purple-600 transition-all duration-300"
-              style={{ width: `${progresso}%` }}
-            />
-          </div>
+    <div className="flex min-h-screen bg-[#F3EFFC] text-gray-900 font-sans">
+      <aside className="w-64 bg-[#E7D7FE] p-6 flex flex-col gap-8 shrink-0">
+        <div className="flex justify-center mt-2 mb-2">
+          <TechPathLogo size="small" />
         </div>
 
-        <div className="rounded-2xl bg-white p-8 shadow-md">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-purple-600">
-            {pergunta.categoria}
-          </p>
+        <nav className="flex flex-col gap-3">
+          <button
+            onClick={() => mudarTela("questionario")}
+            className="w-full bg-white text-gray-900 font-bold py-3 px-4 rounded-xl shadow-sm text-center text-sm border border-purple-100 hover:bg-purple-50 transition"
+          >
+            Página Inicial
+          </button>
+          <button
+            onClick={() => mudarTela("questionario")}
+            className="w-full bg-white text-gray-900 font-bold py-3 px-4 rounded-xl shadow-sm text-center text-sm border border-purple-100 hover:bg-purple-50 transition"
+          >
+            Trilha
+          </button>
+          <button
+            onClick={() => mudarTela("resultado")}
+            className="w-full bg-white text-gray-900 font-bold py-3 px-4 rounded-xl shadow-sm text-center text-sm border border-purple-100 hover:bg-purple-50 transition"
+          >
+            Resultados
+          </button>
+          <button className="w-full text-gray-800 font-bold py-3 px-4 text-center text-sm hover:text-[#5816B7] transition mt-2">
+            Perfil
+          </button>
+        </nav>
+      </aside>
 
-          <h2 className="mb-8 text-2xl font-bold leading-relaxed text-gray-800">
-            {pergunta.pergunta}
-          </h2>
+      <div className="flex-1 flex flex-col p-8 relative">
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => mudarTela("login")}
+            className="bg-white text-gray-800 font-bold px-8 py-2 rounded-lg shadow-xs text-sm border border-gray-100 hover:bg-gray-50 transition"
+          >
+            Sair
+          </button>
+        </div>
 
-          <div className="space-y-4">
-            {pergunta.alternativas.map((alternativa, indice) => {
-              const selecionada = respostaSelecionada === indice;
+        {telaAtual === "questionario" ? (
+          <main className="max-w-4xl w-full mx-auto bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex flex-col justify-between min-h-[540px]">
+            <div>
+              <div className="flex justify-between items-center text-sm font-semibold text-gray-800 mb-2">
+                <span>
+                  Pergunta {perguntaAtual + 1} de {perguntas.length}
+                </span>
+                <span>{progresso}%</span>
+              </div>
 
-              return (
-                <button
-                  key={indice}
-                  onClick={() => selecionarResposta(indice)}
-                  className={`w-full rounded-xl border-2 p-4 text-left transition ${
-                    selecionada
-                      ? "border-purple-600 bg-purple-50 text-purple-800"
-                      : "border-gray-200 bg-white text-gray-700 hover:border-purple-300 hover:bg-gray-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                        selecionada
-                          ? "border-purple-600 bg-purple-600"
-                          : "border-gray-300"
+              <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden mb-6">
+                <div
+                  className="bg-[#5816B7] h-full transition-all duration-300 rounded-full"
+                  style={{ width: `${progresso}%` }}
+                />
+              </div>
+
+              <div className="mb-6">
+                <span className="inline-block border border-purple-300 bg-[#E7D7FE]/40 text-gray-900 px-3 py-1.5 rounded-md text-xs font-semibold">
+                  {pergunta.categoria}
+                </span>
+              </div>
+
+              <h2 className="text-xl font-bold text-gray-900 mb-6">{pergunta.pergunta}</h2>
+
+              <div className="space-y-3">
+                {pergunta.alternativas.map((alternativa, indice) => {
+                  const estaSelecionada = respostaSelecionada === indice;
+                  return (
+                    <button
+                      key={indice}
+                      onClick={() => selecionarResposta(indice)}
+                      className={`w-full text-left py-4 px-5 rounded-xl border transition-all text-sm font-semibold ${
+                        estaSelecionada
+                          ? "bg-[#E7D7FE] border-purple-300 text-gray-900 shadow-sm"
+                          : "bg-white border-gray-200 text-gray-800 hover:bg-purple-50/50"
                       }`}
                     >
-                      {selecionada && (
-                        <div className="h-2.5 w-2.5 rounded-full bg-white" />
-                      )}
-                    </div>
-
-                    <span className="font-medium">
                       {alternativa.texto}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          <div className="mt-10 flex justify-between gap-4">
-            <button
-              onClick={voltarPergunta}
-              disabled={perguntaAtual === 0}
-              className="rounded-xl border border-gray-300 px-6 py-3 font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Voltar
-            </button>
+            <div className="mt-8 pt-4 flex justify-center items-center gap-6">
+              <button
+                onClick={voltarPergunta}
+                disabled={perguntaAtual === 0}
+                className="bg-[#E7D7FE] text-gray-900 font-bold px-10 py-3 rounded-xl text-sm hover:bg-purple-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={proximaPergunta}
+                disabled={respostaSelecionada === null}
+                className="bg-[#E7D7FE] text-gray-900 font-bold px-10 py-3 rounded-xl text-sm hover:bg-purple-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {perguntaAtual === perguntas.length - 1 ? "Finalizar" : "Próxima"}
+              </button>
+            </div>
+          </main>
+        ) : (
+          <main className="max-w-4xl w-full mx-auto flex flex-col gap-6">
+            <div className="bg-[#E7D7FE] rounded-3xl p-8 flex items-center justify-between shadow-sm">
+              <div>
+                <p className="text-sm font-bold text-gray-800">Sua principal afinidade é</p>
+                <h1 className="text-3xl font-extrabold text-gray-900 mt-1">{principal.nome}</h1>
+                <p className="text-sm font-bold text-gray-700 mt-2">{principal.pct}% de afinidade</p>
+              </div>
 
-            <button
-              onClick={proximaPergunta}
-              disabled={respostaSelecionada === null}
-              className="rounded-xl bg-purple-700 px-8 py-3 font-semibold text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {perguntaAtual === perguntas.length - 1
-                ? "Finalizar"
-                : "Próxima"}
-            </button>
-          </div>
-        </div>
-      </section>
-    </main>
+              <div className="w-64 h-32 bg-[#150035] rounded-2xl shadow-sm flex items-center justify-center p-4">
+                <TechPathLogo size="small" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-[#F8F6FF] border-2 border-blue-400 rounded-3xl p-8 min-h-[240px]">
+                <p className="text-base font-semibold text-gray-800 leading-relaxed">
+                  <span className="font-bold">{principal.nome}</span> {principal.desc.replace(principal.nome + " é ", "")}
+                </p>
+              </div>
+
+              <div className="bg-[#F8F6FF] border border-gray-300 rounded-3xl p-8 flex flex-col justify-between min-h-[240px]">
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Outras áreas</h3>
+
+                <div className="space-y-5">
+                  {outrasAreas.map((area, idx) => (
+                    <div key={idx}>
+                      <div className="flex justify-between text-sm font-bold text-gray-800 mb-1.5">
+                        <span>{area.nome}</span>
+                        <span>{area.pct}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-[#5816B7] h-full rounded-full transition-all duration-500"
+                          style={{ width: `${area.pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={refazerQuestionario}
+                className="bg-[#E7D7FE] text-gray-900 font-bold px-12 py-4 rounded-2xl text-sm hover:bg-purple-200 transition shadow-sm w-full max-w-md"
+              >
+                Ver minha trilha de estudos
+              </button>
+            </div>
+          </main>
+        )}
+      </div>
+    </div>
   );
 }
